@@ -1,0 +1,24 @@
+{
+  "name": "vendor-management-system",
+  "version": "1.0.0",
+  "description": "Enterprise Procurement Portal for Onboarding Suppliers, Vendor Performance Evaluation, and Purchase Order Lifecycle Management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "procurement",
+    "vendor-management",
+    "purchase-orders",
+    "fsd-project"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1"
+  }
+}
