@@ -43,12 +43,17 @@ app.use((req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log('====================================================');
-  console.log(`🚀 VENDOR MANAGEMENT SYSTEM (VMS) SERVER RUNNING`);
-  console.log(`🌐 Local Application URL: http://localhost:${PORT}`);
-  console.log(`📡 API Endpoints Base:   http://localhost:${PORT}/api`);
-  console.log(`📦 Storage Adapter:       Self-Healing File-Backed JSON Store`);
-  console.log(`🎯 Mode:                  ${process.env.NODE_ENV || 'development'}`);
-  console.log('====================================================');
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log('====================================================');
+    console.log(`🚀 VENDOR MANAGEMENT SYSTEM (VMS) SERVER RUNNING`);
+    console.log(`🌐 Local Application URL: http://localhost:${PORT}`);
+    console.log(`📡 API Endpoints Base:   http://localhost:${PORT}/api`);
+    console.log(`📦 Storage Adapter:       Self-Healing File-Backed JSON Store`);
+    console.log(`🎯 Mode:                  ${process.env.NODE_ENV || 'development'}`);
+    console.log('====================================================');
+  });
+}
+
+module.exports = app;
+

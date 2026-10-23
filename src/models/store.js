@@ -8,28 +8,39 @@ const fs = require('fs');
 const path = require('path');
 const { initialVendors, initialOrders, initialEvaluations } = require('../data/initialData');
 
-const DATA_DIR = path.join(__dirname, '../data');
+const DATA_DIR = process.env.VERCEL ? '/tmp' : path.join(__dirname, '../data');
 const STORE_FILE = path.join(DATA_DIR, 'vms_store.json');
 
 class Store {
   constructor() {
+    this.memoryCache = null;
     this.ensureStoreInitialized();
   }
 
   ensureStoreInitialized() {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
 
-    if (!fs.existsSync(STORE_FILE)) {
+      if (!fs.existsSync(STORE_FILE)) {
+        this.resetData();
+      }
+    } catch (err) {
+      console.warn('Filesystem init warning (using in-memory store):', err.message);
       this.resetData();
     }
   }
 
   readStore() {
+    if (this.memoryCache) return this.memoryCache;
     try {
-      const content = fs.readFileSync(STORE_FILE, 'utf8');
-      return JSON.parse(content);
+      if (fs.existsSync(STORE_FILE)) {
+        const content = fs.readFileSync(STORE_FILE, 'utf8');
+        this.memoryCache = JSON.parse(content);
+        return this.memoryCache;
+      }
+      return this.resetData();
     } catch (err) {
       console.error('Error reading store file, reinitializing...', err);
       return this.resetData();
@@ -37,12 +48,13 @@ class Store {
   }
 
   writeStore(data) {
+    this.memoryCache = data;
     try {
       fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), 'utf8');
       return true;
     } catch (err) {
-      console.error('Error writing to store file:', err);
-      return false;
+      console.warn('Notice: Written to in-memory store (disk read-only or restricted):', err.message);
+      return true;
     }
   }
 
