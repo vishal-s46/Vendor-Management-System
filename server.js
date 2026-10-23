@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const vendorRoutes = require('./src/routes/vendorRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
@@ -15,8 +16,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve Static Frontend
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve Static Frontend (checks frontend/ first, then public/)
+const frontendDir = path.join(__dirname, 'frontend');
+const publicDir = path.join(__dirname, 'public');
+
+if (fs.existsSync(frontendDir)) {
+  app.use(express.static(frontendDir));
+} else if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+}
 
 // API Routes
 app.use('/api/vendors', vendorRoutes);
@@ -39,7 +47,15 @@ app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ success: false, message: 'API route not found' });
   }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const indexFile = fs.existsSync(path.join(frontendDir, 'index.html'))
+    ? path.join(frontendDir, 'index.html')
+    : path.join(publicDir, 'index.html');
+
+  if (fs.existsSync(indexFile)) {
+    res.sendFile(indexFile);
+  } else {
+    res.json({ success: true, message: 'VMS Backend API is active and running.' });
+  }
 });
 
 // Start Server
@@ -56,4 +72,3 @@ if (require.main === module) {
 }
 
 module.exports = app;
-

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vendor Management System (VMS) | Enterprise Procurement Portal</title>
+  <meta name="description" content="Enterprise procurement portal for onboarding suppliers, evaluating vendor performance KPIs, and managing end-to-end purchase order lifecycles.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+
+  <!-- Top App Navigation & Persona Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo-icon">P</div>
+      <div class="brand-text">
+        <h1>PROCURA VMS</h1>
+        <p>Procurement Portal & Supplier Lifecycle Management</p>
+      </div>
+    </div>
+
+    <div class="header-center-status">
+      <span class="status-pulse-dot"></span>
+      <span id="api-status-text">REST Engine Online &bull; Local JSON Persistent Store</span>
+    </div>
+
+    <div class="header-right-actions">
+      <!-- Role / Persona Switcher for Presentation & Demonstration -->
+      <div class="role-switcher-container" title="Switch active persona to test Role-Based Access Control">
+        <span class="role-switcher-label">Role:</span>
+        <select id="role-selector" class="role-select">
+          <option value="admin">👑 Admin (Full Control)</option>
+          <option value="procurement">💼 Procurement Officer</option>
+          <option value="vendor">🏭 Supplier / Vendor</option>
+        </select>
+        <span id="current-role-badge" class="role-badge admin">ADMIN</span>
+      </div>
+
+      <button id="btn-open-onboard" class="btn btn-primary btn-sm">
+        <span>+</span> Onboard Supplier
+      </button>
+      <button id="btn-open-create-po" class="btn btn-success btn-sm">
+        <span>+</span> Create PO
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-layout">
+
+    <!-- KPI Metric Tickers -->
+    <section class="kpi-grid">
+      <div class="kpi-card purple">
+        <div class="kpi-header">
+          <span class="kpi-title">Active Suppliers</span>
+          <div class="kpi-icon-badge purple">🏢</div>
+        </div>
+        <div id="kpi-vendors-val" class="kpi-value">--</div>
+        <div class="kpi-subtitle">
+          <span id="kpi-vendors-sub" class="kpi-trend positive">-- Approved</span>
+          <span>in directory</span>
+        </div>
+      </div>
+
+      <div class="kpi-card blue">
+        <div class="kpi-header">
+          <span class="kpi-title">Purchase Orders</span>
+          <div class="kpi-icon-badge blue">📦</div>
+        </div>
+        <div id="kpi-orders-val" class="kpi-value">--</div>
+        <div class="kpi-subtitle">
+          <span id="kpi-orders-sub" class="kpi-trend neutral">-- In Fulfillment</span>
+          <span>active tracking</span>
+        </div>
+      </div>
+
+      <div class="kpi-card emerald">
+        <div class="kpi-header">
+          <span class="kpi-title">Procurement Spend</span>
+          <div class="kpi-icon-badge emerald">₹</div>
+        </div>
+        <div id="kpi-spend-val" class="kpi-value mono">₹0</div>
+        <div class="kpi-subtitle">
+          <span id="kpi-completed-spend" class="kpi-trend positive">₹0 Paid</span>
+          <span>settled</span>
+        </div>
+      </div>
+
+      <div class="kpi-card amber">
+        <div class="kpi-header">
+          <span class="kpi-title">Vendor Performance</span>
+          <div class="kpi-icon-badge amber">★</div>
+        </div>
+        <div id="kpi-rating-val" class="kpi-value">-- / 5.0</div>
+        <div class="kpi-subtitle">
+          <span class="kpi-trend positive">Weighted KPI</span>
+          <span>Delivery &bull; Quality &bull; Cost</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="tab-navigation">
+      <button class="tab-btn active" data-tab="tab-dashboard" id="nav-tab-dashboard">
+        <span>📊</span> Executive Dashboard
+      </button>
+      <button class="tab-btn" data-tab="tab-vendors" id="nav-tab-vendors">
+        <span>🏢</span> Supplier Onboarding & Directory <span id="badge-vendor-count" class="tab-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-orders" id="nav-tab-orders">
+        <span>📦</span> Purchase Order Lifecycles <span id="badge-order-count" class="tab-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-performance" id="nav-tab-performance">
+        <span>📈</span> Vendor KPI Scorecard Matrix
+      </button>
+      <button class="tab-btn" data-tab="tab-audit" id="nav-tab-audit">
+        <span>📑</span> Audit Trail & Reports
+      </button>
+    </nav>
+
+    <!-- ==================== TAB 1: EXECUTIVE DASHBOARD ==================== -->
+    <section id="tab-dashboard" class="tab-pane active">
+      <div class="matrix-container" style="margin-bottom: 1.5rem;">
+        <!-- Spend Breakdown by Category -->
+        <div class="matrix-card">
+          <div class="matrix-header">
+            <h3>Procurement Spend by Category</h3>
+            <p>Financial volume allocated across registered supply domains</p>
+          </div>
+          <div id="category-spend-container" style="display: flex; flex-direction: column; gap: 0.9rem;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- PO Lifecycle Status Pipeline -->
+        <div class="matrix-card">
+          <div class="matrix-header">
+            <h3>Purchase Order Lifecycle Funnel</h3>
+            <p>Real-time order progression from requisition to payment</p>
+          </div>
+          <div id="order-pipeline-container" style="display: flex; flex-direction: column; gap: 0.8rem;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Performing Vendors Leaderboard -->
+      <div class="matrix-card">
+        <div class="matrix-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3>Top Performing Supplier Leaderboard</h3>
+            <p>Vendors meeting enterprise benchmark thresholds for SLA delivery and quality</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="app.switchTab('tab-vendors')">View All Suppliers &rarr;</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Supplier Code</th>
+                <th>Company Name</th>
+                <th>Category</th>
+                <th>Composite Rating</th>
+                <th>Tier Classification</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="top-vendors-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: VENDORS & ONBOARDING ==================== -->
+    <section id="tab-vendors" class="tab-pane">
+      <!-- Search & Filters Bar -->
+      <div class="filter-action-bar">
+        <div class="filters-group">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="vendor-search" class="search-input" placeholder="Search by name, GSTIN, ID...">
+          </div>
+          <select id="vendor-category-filter" class="filter-select">
+            <option value="All">All Categories</option>
+            <option value="IT & Hardware">IT & Hardware</option>
+            <option value="Precision Engineering">Precision Engineering</option>
+            <option value="Chemicals & Reagents">Chemicals & Reagents</option>
+            <option value="Logistics & Shipping">Logistics & Shipping</option>
+            <option value="Office & Facilities">Office & Facilities</option>
+            <option value="Safety & Compliance">Safety & Compliance</option>
+          </select>
+          <select id="vendor-status-filter" class="filter-select">
+            <option value="All">All Statuses</option>
+            <option value="Approved">Approved</option>
+            <option value="Pending Review">Pending Review</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem;">
+          <button id="btn-export-vendors-csv" class="btn btn-secondary btn-sm">
+            <span>📥</span> Export CSV
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="app.openOnboardModal()">
+            <span>+</span> Onboard Supplier
+          </button>
+        </div>
+      </div>
+
+      <!-- Vendor Cards Grid -->
+      <div id="vendor-cards-grid" class="vendor-cards-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: PURCHASE ORDERS ==================== -->
+    <section id="tab-orders" class="tab-pane">
+      <!-- Order Filters Bar -->
+      <div class="filter-action-bar">
+        <div class="filters-group">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="order-search" class="search-input" placeholder="Search PO#, Item or Supplier...">
+          </div>
+          <select id="order-status-filter" class="filter-select">
+            <option value="All">All Lifecycle Stages</option>
+            <option value="Draft">Draft</option>
+            <option value="Pending Approval">Pending Approval</option>
+            <option value="Issued">Issued</option>
+            <option value="Accepted">Accepted</option>
+            <option value="In Fulfillment">In Fulfillment</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem;">
+          <button id="btn-export-orders-csv" class="btn btn-secondary btn-sm">
+            <span>📥</span> Export POs CSV
+          </button>
+          <button class="btn btn-success btn-sm" onclick="app.openCreatePoModal()">
+            <span>+</span> New Purchase Order
+          </button>
+        </div>
+      </div>
+
+      <!-- Purchase Orders Table -->
+      <div class="po-table-container">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>PO Number</th>
+                <th>Supplier</th>
+                <th>Order Requisition Title</th>
+                <th>Status & Lifecycle</th>
+                <th>Amount (INR)</th>
+                <th>Delivery SLA</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="orders-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: PERFORMANCE & KPI MATRIX ==================== -->
+    <section id="tab-performance" class="tab-pane">
+      <div class="matrix-container">
+        <!-- Interactive Evaluation Simulator & Form -->
+        <div class="matrix-card">
+          <div class="matrix-header">
+            <h3>Supplier Evaluation Engine</h3>
+            <p>Score performance across 4 enterprise procurement pillars</p>
+          </div>
+
+          <form id="evaluation-form" onsubmit="event.preventDefault(); app.submitEvaluation();">
+            <div class="form-group">
+              <label class="form-label">Select Vendor <span class="req">*</span></label>
+              <select id="eval-vendor-select" class="form-control" required onchange="app.onEvalVendorChange()">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Associated Purchase Order Reference</label>
+              <input type="text" id="eval-po-ref" class="form-control" placeholder="e.g. PO-2026-001 or Annual Audit">
+            </div>
+
+            <!-- Metric 1: Delivery -->
+            <div class="metric-slider-row">
+              <div class="metric-slider-header">
+                <span>1. On-Time Delivery & SLA Compliance (Weight: 35%)</span>
+                <span id="val-delivery" class="metric-slider-value">4.5 / 5.0</span>
+              </div>
+              <input type="range" id="slider-delivery" class="slider-input" min="1.0" max="5.0" step="0.1" value="4.5" oninput="app.updateEvalCalculations()">
+            </div>
+
+            <!-- Metric 2: Quality -->
+            <div class="metric-slider-row">
+              <div class="metric-slider-header">
+                <span>2. Product / Service Quality & Spec Compliance (Weight: 35%)</span>
+                <span id="val-quality" class="metric-slider-value">4.5 / 5.0</span>
+              </div>
+              <input type="range" id="slider-quality" class="slider-input" min="1.0" max="5.0" step="0.1" value="4.5" oninput="app.updateEvalCalculations()">
+            </div>
+
+            <!-- Metric 3: Pricing -->
+            <div class="metric-slider-row">
+              <div class="metric-slider-header">
+                <span>3. Pricing Competitiveness & Value (Weight: 15%)</span>
+                <span id="val-pricing" class="metric-slider-value">4.0 / 5.0</span>
+              </div>
+              <input type="range" id="slider-pricing" class="slider-input" min="1.0" max="5.0" step="0.1" value="4.0" oninput="app.updateEvalCalculations()">
+            </div>
+
+            <!-- Metric 4: Support -->
+            <div class="metric-slider-row">
+              <div class="metric-slider-header">
+                <span>4. Customer Support & Responsiveness (Weight: 15%)</span>
+                <span id="val-support" class="metric-slider-value">4.2 / 5.0</span>
+              </div>
+              <input type="range" id="slider-support" class="slider-input" min="1.0" max="5.0" step="0.1" value="4.2" oninput="app.updateEvalCalculations()">
+            </div>
+
+            <!-- Calculated Composite Result -->
+            <div class="composite-preview-box">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Calculated Composite Index</div>
+              <div id="eval-calculated-score" class="composite-preview-score">4.41</div>
+              <div id="eval-calculated-tier" class="tier-badge tier-silver">Silver (Approved)</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Audit Remarks & Auditor Feedback</label>
+              <textarea id="eval-comments" class="form-control" placeholder="Provide qualitative assessment observations..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              Record Official Evaluation
+            </button>
+          </form>
+        </div>
+
+        <!-- Evaluation History Log -->
+        <div class="matrix-card">
+          <div class="matrix-header">
+            <h3>Recent Supplier Appraisal Log</h3>
+            <p>Official procurement assessment records</p>
+          </div>
+          <div id="evaluations-log-list" style="display: flex; flex-direction: column; gap: 1rem; max-height: 580px; overflow-y: auto;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: AUDIT TRAIL & REPORTS ==================== -->
+    <section id="tab-audit" class="tab-pane">
+      <div class="matrix-card" style="margin-bottom: 1.5rem;">
+        <div class="matrix-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h3>Procurement Audit Trail</h3>
+            <p>Immutable log of vendor lifecycle modifications, purchase orders, and status approvals</p>
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <button class="btn btn-secondary btn-sm" onclick="app.downloadExport('vendors')">
+              Export Vendors CSV
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="app.downloadExport('orders')">
+              Export Orders CSV
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="app.resetSystemData()">
+              🔄 Reset Demo Dataset
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Event ID</th>
+                <th>Action Category</th>
+                <th>Timestamp</th>
+                <th>Activity Summary</th>
+              </tr>
+            </thead>
+            <tbody id="audit-log-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL 1: SUPPLIER ONBOARDING WIZARD ==================== -->
+  <div id="modal-onboard" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Supplier Onboarding Registration</h3>
+        <button class="modal-close-btn" onclick="app.closeModals()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="wizard-steps">
+          <div id="step-ind-1" class="wizard-step-item active">
+            <div class="wizard-step-circle">1</div>
+            <span>Corporate Identity</span>
+          </div>
+          <div id="step-ind-2" class="wizard-step-item">
+            <div class="wizard-step-circle">2</div>
+            <span>Category & Contact</span>
+          </div>
+          <div id="step-ind-3" class="wizard-step-item">
+            <div class="wizard-step-circle">3</div>
+            <span>Banking & Compliance</span>
+          </div>
+        </div>
+
+        <form id="onboard-form">
+          <!-- Step 1: Corporate Details -->
+          <div id="wizard-pane-1">
+            <div class="form-group">
+              <label class="form-label">Trade / Operating Name <span class="req">*</span></label>
+              <input type="text" id="ob-name" class="form-control" placeholder="e.g. Apex Global Technologies" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Registered Legal Name</label>
+              <input type="text" id="ob-legalName" class="form-control" placeholder="e.g. Apex Global Technologies Pvt. Ltd.">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Tax ID / GSTIN <span class="req">*</span></label>
+                <input type="text" id="ob-taxId" class="form-control" placeholder="e.g. 29AAAAA0000A1Z5" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Supply Category <span class="req">*</span></label>
+                <select id="ob-category" class="form-control" required>
+                  <option value="IT & Hardware">IT & Hardware</option>
+                  <option value="Precision Engineering">Precision Engineering</option>
+                  <option value="Chemicals & Reagents">Chemicals & Reagents</option>
+                  <option value="Logistics & Shipping">Logistics & Shipping</option>
+                  <option value="Office & Facilities">Office & Facilities</option>
+                  <option value="Safety & Compliance">Safety & Compliance</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 0 0 0; background: transparent;">
+              <button type="button" class="btn btn-primary" onclick="app.wizardNext(2)">Next: Contact Details &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Step 2: Contact Details -->
+          <div id="wizard-pane-2" style="display: none;">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Primary Contact Person <span class="req">*</span></label>
+                <input type="text" id="ob-contact" class="form-control" placeholder="e.g. Rajesh Sharma" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Official Email <span class="req">*</span></label>
+                <input type="email" id="ob-email" class="form-control" placeholder="e.g. procure@apextech.com" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Phone <span class="req">*</span></label>
+              <input type="text" id="ob-phone" class="form-control" placeholder="e.g. +91 98765 43210" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Corporate Registered Address</label>
+              <textarea id="ob-address" class="form-control" placeholder="Street, City, State, PIN"></textarea>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 0 0 0; background: transparent; justify-content: space-between;">
+              <button type="button" class="btn btn-secondary" onclick="app.wizardNext(1)">&larr; Back</button>
+              <button type="button" class="btn btn-primary" onclick="app.wizardNext(3)">Next: Financials &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Banking & Compliance -->
+          <div id="wizard-pane-3" style="display: none;">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Bank Name</label>
+                <input type="text" id="ob-bankName" class="form-control" placeholder="e.g. HDFC Bank">
+              </div>
+              <div class="form-group">
+                <label class="form-label">IFSC / SWIFT Code</label>
+                <input type="text" id="ob-ifsc" class="form-control" placeholder="e.g. HDFC0001234">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bank Account Number</label>
+              <input type="text" id="ob-accNo" class="form-control" placeholder="e.g. 50200012345678">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Special Remarks / Quality Certifications</label>
+              <input type="text" id="ob-remarks" class="form-control" placeholder="e.g. ISO 9001:2015 certified, MSME registered">
+            </div>
+            <div class="modal-footer" style="padding: 1rem 0 0 0; background: transparent; justify-content: space-between;">
+              <button type="button" class="btn btn-secondary" onclick="app.wizardNext(2)">&larr; Back</button>
+              <button type="button" class="btn btn-success" onclick="app.submitOnboard()">Complete Supplier Submission</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: CREATE PURCHASE ORDER ==================== -->
+  <div id="modal-create-po" class="modal-backdrop">
+    <div class="modal-content wide">
+      <div class="modal-header">
+        <h3>Draft New Purchase Order</h3>
+        <button class="modal-close-btn" onclick="app.closeModals()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="po-form" onsubmit="event.preventDefault(); app.submitPo();">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Select Supplier <span class="req">*</span></label>
+              <select id="po-vendorId" class="form-control" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Order Requisition Title <span class="req">*</span></label>
+              <input type="text" id="po-title" class="form-control" placeholder="e.g. Quarterly Server Hardware Upgrade" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Expected Delivery SLA <span class="req">*</span></label>
+              <input type="date" id="po-deliveryDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Initial Status</label>
+              <select id="po-initialStatus" class="form-control">
+                <option value="Draft">Save as Draft</option>
+                <option value="Pending Approval">Submit for Approval</option>
+                <option value="Issued">Issue Directly to Vendor</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dynamic Line Items -->
+          <div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <div class="line-items-header">
+              <label class="form-label" style="margin: 0; font-size: 0.9rem;">Procurement Line Items</label>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="app.addLineItemRow()">+ Add Item</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 3fr 1fr 1.5fr 1.5fr 40px; gap: 0.5rem; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.4rem; padding-left: 0.2rem;">
+              <span>ITEM DESCRIPTION</span>
+              <span>QTY</span>
+              <span>UNIT PRICE (₹)</span>
+              <span>LINE TOTAL</span>
+              <span></span>
+            </div>
+
+            <div id="po-line-items-container">
+              <!-- Item rows injected here -->
+            </div>
+
+            <!-- Financials Summary -->
+            <div class="totals-summary-box">
+              <div class="summary-line">
+                <span>Subtotal:</span>
+                <span id="po-calc-subtotal" style="font-family: var(--font-mono);">₹0</span>
+              </div>
+              <div class="summary-line">
+                <span>GST (18%):</span>
+                <span id="po-calc-tax" style="font-family: var(--font-mono);">₹0</span>
+              </div>
+              <div class="summary-line">
+                <span>Freight / Shipping:</span>
+                <input type="number" id="po-calc-shipping" value="0" min="0" style="width: 80px; text-align: right; background: var(--bg-input); color: #fff; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); padding: 0.15rem 0.4rem; font-family: var(--font-mono);" oninput="app.recalculatePoTotals()">
+              </div>
+              <div class="summary-line grand">
+                <span>Grand Total:</span>
+                <span id="po-calc-grand" style="font-family: var(--font-mono); color: #34d399;">₹0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1.25rem;">
+            <label class="form-label">Delivery Notes / Terms</label>
+            <textarea id="po-notes" class="form-control" placeholder="Specify dock receiving hours, packaging requirements..."></textarea>
+          </div>
+
+          <div class="modal-footer" style="padding: 1.25rem 0 0 0; background: transparent;">
+            <button type="button" class="btn btn-secondary" onclick="app.closeModals()">Cancel</button>
+            <button type="submit" class="btn btn-success">Draft & Save Purchase Order</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: PO DETAILS & LIFECYCLE STEPPER ==================== -->
+  <div id="modal-po-details" class="modal-backdrop">
+    <div class="modal-content wide">
+      <div class="modal-header">
+        <div>
+          <h3 id="pod-id">PO-2026-000</h3>
+          <p id="pod-vendor" style="font-size: 0.8rem; color: var(--text-muted);">Supplier Details</p>
+        </div>
+        <button class="modal-close-btn" onclick="app.closeModals()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Interactive Lifecycle Stepper Banner -->
+        <div style="background: rgba(10, 16, 32, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Lifecycle Progress</span>
+            <span id="pod-status-badge" class="status-pill approved">Draft</span>
+          </div>
+
+          <div id="pod-stepper-stages" style="display: flex; justify-content: space-between; position: relative;">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Quick Action Buttons Depending on State & Persona -->
+          <div id="pod-action-controls" style="margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <!-- State transition buttons injected here -->
+          </div>
+        </div>
+
+        <!-- Line items table -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem;">Procured Goods / Services</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="pod-items-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Lifecycle Event History Log -->
+        <div>
+          <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem;">Timeline & Audit Events</h4>
+          <div id="pod-timeline-list" class="timeline-list">
+            <!-- Timeline elements injected here -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.print()">🖨️ Print Purchase Order</button>
+        <button type="button" class="btn btn-primary" onclick="app.closeModals()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 4: VENDOR DOSSIER ==================== -->
+  <div id="modal-vendor-dossier" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h3 id="vd-name">Supplier Dossier</h3>
+          <span id="vd-id" class="vendor-id-pill">VND-0000</span>
+        </div>
+        <button class="modal-close-btn" onclick="app.closeModals()">&times;</button>
+      </div>
+
+      <div class="modal-body" id="vd-content">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="modal-footer" id="vd-footer">
+        <button type="button" class="btn btn-secondary" onclick="app.closeModals()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

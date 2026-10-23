@@ -1,0 +1,19 @@
+{
+  "name": "vendor-management-system-frontend",
+  "version": "1.0.0",
+  "description": "Frontend UI Client for Vendor Management System (Enterprise Procurement Portal)",
+  "scripts": {
+    "start": "npx -y serve -l 3000 .",
+    "dev": "npx -y serve -l 3000 ."
+  },
+  "keywords": [
+    "frontend",
+    "vendor-management",
+    "procurement",
+    "html5",
+    "css3",
+    "javascript"
+  ],
+  "author": "Malathy Selvam",
+  "license": "MIT"
+}

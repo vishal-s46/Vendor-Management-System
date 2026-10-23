@@ -1,9 +1,21 @@
 /**
  * Vendor Management System - API Client
  * Clean asynchronous fetch abstraction for REST endpoints.
+ * Automatically connects to backend whether running unified, on Live Server, or deployed separately.
  */
 
-const API_BASE = '/api';
+const getApiBase = () => {
+  if (typeof window !== 'undefined' && window.VMS_BACKEND_URL) {
+    return `${window.VMS_BACKEND_URL.replace(/\/$/, '')}/api`;
+  }
+  // If running on a dedicated frontend port like 3000, 5500, or file://, route to backend at 5000
+  if (typeof window !== 'undefined' && window.location.port && window.location.port !== '5000') {
+    return 'http://localhost:5000/api';
+  }
+  return '/api';
+};
+
+const API_BASE = getApiBase();
 
 const api = {
   async request(endpoint, options = {}) {
